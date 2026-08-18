@@ -1,1 +1,110 @@
-const $=(s,root=document)=>root.querySelector(s);const $$=(s,root=document)=>[...root.querySelectorAll(s)];const KEY='rava-dashboard-v2';const state=JSON.parse(localStorage.getItem(KEY)||'{}');state.tasks=state.tasks||[];state.goals=state.goals||[{title:'طراحی نسخه اول محصول',value:68,color:'purple'},{title:'یادگیری زبان انگلیسی',value:42,color:'orange'}];state.notes=state.notes||'';function save(){localStorage.setItem(KEY,JSON.stringify(state))}function toast(text){let t=$('#toast');t.textContent=text;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)}function injectTools(){const host=$('.content');const tools=document.createElement('section');tools.className='pro-grid';tools.innerHTML=`<div class="panel focus-box"><div class="panel-head"><div><span class="eyebrow">جلسه تمرکز</span><h2>حواس‌پرتی را خاموش کن</h2></div><span class="live-dot">● آماده</span></div><div class="timer" id="timer">25:00</div><div class="timer-track"><i id="timerBar"></i></div><div class="timer-actions"><button class="primary" id="timerStart">شروع جلسه</button><button class="soft" id="timerReset">بازنشانی</button><span>پومودورو · ۲۵ دقیقه</span></div></div><div class="panel goals-box" id="goals"><div class="panel-head"><div><span class="eyebrow">هدف‌های فعال</span><h2>قدم‌های بزرگ، روزهای کوچک</h2></div><button class="add-task" id="addGoal">+ هدف جدید</button></div><div id="goalsList"></div></div><div class="panel notes-box" id="notes"><div class="panel-head"><div><span class="eyebrow">یادداشت سریع</span><h2>هر چیزی که در ذهنته</h2></div><span class="save-state">ذخیره خودکار</span></div><textarea id="quickNote" placeholder="ایده، قدردانی یا نکته مهم امروز را اینجا بنویس..."></textarea><div class="note-footer"><span>⌘ + Enter برای ذخیره</span><button class="soft" id="saveNote">ذخیره یادداشت</button></div></div><div class="panel analytics-box" id="analytics"><div class="panel-head"><div><span class="eyebrow">تحلیل هوشمند</span><h2>عملکردت در یک نگاه</h2></div><select id="range"><option>۷ روز اخیر</option><option>۳۰ روز اخیر</option><option>۳ ماه اخیر</option></select></div><div class="metric-row"><div><strong>۸۶٪</strong><small>نرخ تکمیل</small></div><div><strong>۶.۴h</strong><small>تمرکز روزانه</small></div><div><strong>+۲۴٪</strong><small>رشد این ماه</small></div></div><div class="week-chart"><i style="height:42%"><b>ش</b></i><i style="height:58%"><b>ی</b></i><i style="height:51%"><b>د</b></i><i style="height:76%"><b>س</b></i><i style="height:64%"><b>چ</b></i><i style="height:88%"><b>پ</b></i><i style="height:70%"><b>ج</b></i></div></div>`;host.appendChild(tools);renderGoals();$('#quickNote').value=state.notes;$('#saveNote').onclick=saveNote;$('#quickNote').addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key==='Enter')saveNote()});$('#addGoal').onclick=addGoal;$('#range').onchange=e=>toast(`تحلیل ${e.target.value} نمایش داده شد`);timerSetup()}function renderGoals(){const box=$('#goalsList');if(!box)return;box.innerHTML=state.goals.map((g,i)=>`<div class="goal"><div class="goal-title"><span class="goal-badge ${g.color}">◎</span><strong>${g.title}</strong><b>${g.value}%</b></div><div class="goal-progress"><i class="${g.color}" style="width:${g.value}%"></i></div><div class="goal-meta"><span>تا هدف بعدی ${100-g.value}% باقی مانده</span><button data-goal="${i}">+ پیشرفت</button></div></div>`).join('');$$('[data-goal]').forEach(b=>b.onclick=()=>{state.goals[+b.dataset.goal].value=Math.min(100,state.goals[+b.dataset.goal].value+5);save();renderGoals();toast('پیشرفت هدف ثبت شد ✦')})}function addGoal(){const title=prompt('نام هدف جدید:');if(!title?.trim())return;state.goals.push({title:title.trim().replace(/[<>]/g,''),value:0,color:state.goals.length%2?'orange':'purple'});save();renderGoals();toast('هدف جدید ساخته شد')};function saveNote(){state.notes=$('#quickNote').value;save();toast('یادداشتت ذخیره شد ✓')};function timerSetup(){let seconds=1500,active=false,interval;const el=$('#timer'),bar=$('#timerBar'),start=$('#timerStart');function draw(){el.textContent=`${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;bar.style.width=`${(1-seconds/1500)*100}%`}start.onclick=()=>{active=!active;start.textContent=active?'توقف جلسه':'ادامه جلسه';if(active)interval=setInterval(()=>{seconds--;draw();if(seconds<=0){clearInterval(interval);active=false;start.textContent='شروع جلسه';toast('جلسه تمرکز تمام شد؛ استراحت کن!')}},1000);else clearInterval(interval)};$('#timerReset').onclick=()=>{clearInterval(interval);seconds=1500;active=false;start.textContent='شروع جلسه';draw()};draw()}function enhanceTasks(){const list=$('#taskList');if(!list)return;list.addEventListener('change',e=>{if(e.target.matches('input')){const task=e.target.closest('.task');task.classList.toggle('done',e.target.checked);toast(e.target.checked?'وظیفه تکمیل شد — عالی پیش رفتی!':'وظیفه دوباره به برنامه برگشت');state.tasks=$$('.task',list).map(x=>({title:$('strong',x)?.textContent,done:$('input',x)?.checked}));save()}});$('#addTask').onclick=()=>{const title=prompt('عنوان وظیفه جدید را وارد کن:');if(!title?.trim())return;const item=document.createElement('label');item.className='task';item.innerHTML=`<input type="checkbox"><span class="check"></span><div><strong>${title.trim().replace(/[<>]/g,'')}</strong><small>وظیفه جدید · زمان‌بندی نشده</small></div><time>--:--</time><button class="dots-btn">•••</button>`;list.appendChild(item);toast('وظیفه جدید اضافه شد ✓');state.tasks.push({title,done:false});save()})}function themeSetup(){const button=document.createElement('button');button.className='theme-toggle';button.textContent=document.body.classList.contains('dark')?'☀':'☾';button.title='تغییر حالت نمایش';button.onclick=()=>{document.body.classList.toggle('dark');button.textContent=document.body.classList.contains('dark')?'☀':'☾';localStorage.setItem('rava-dark',document.body.classList.contains('dark'))};document.querySelector('.top-actions').prepend(button);if(localStorage.getItem('rava-dark')==='true'){document.body.classList.add('dark');button.textContent='☀'}}injectTools();enhanceTasks();themeSetup();$$('.task-tabs button').forEach(btn=>btn.onclick=()=>{$$('.task-tabs button').forEach(x=>x.classList.remove('selected'));btn.classList.add('selected')});$('.search')?.addEventListener('click',()=>{const q=prompt('در برنامه جستجو کن:');if(q)toast(`جستجو برای «${q}» آماده است`)});
+const STORAGE_KEY = 'rava-dashboard-data-v4';
+const $ = (selector, root = document) => root.querySelector(selector);
+const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+
+const defaultState = {
+  tasks: [
+    { title: 'مرور اهداف سه‌ماهه', meta: 'برنامه‌ریزی · ۳۰ دقیقه', time: '۰۹:۰۰', done: true },
+    { title: 'طراحی وایرفریم صفحه اصلی', meta: 'پروژه شخصی · ۱ ساعت و ۳۰ دقیقه', time: '۱۰:۳۰', done: false },
+    { title: 'مطالعه فصل چهارم کتاب', meta: 'یادگیری · ۴۵ دقیقه', time: '۱۴:۰۰', done: false },
+    { title: 'پیاده‌روی عصرانه', meta: 'سلامتی · ۳۰ دقیقه', time: '۱۸:۳۰', done: false },
+    { title: 'نوشتن سه نکته روزانه', meta: 'ذهن‌آگاهی · ۱۰ دقیقه', time: '۲۱:۰۰', done: false }
+  ],
+  goals: [
+    { title: 'طراحی نسخه اول محصول', value: 68, color: 'purple' },
+    { title: 'یادگیری زبان انگلیسی', value: 42, color: 'orange' }
+  ],
+  note: '',
+  theme: 'light'
+};
+
+const state = { ...defaultState, ...readState() };
+let activeFilter = 'all';
+let modalType = null;
+let timerSeconds = 25 * 60;
+let timerRunning = false;
+let timerInterval = null;
+
+function readState() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
+  catch { return {}; }
+}
+function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+function clean(value) { return String(value).trim().replace(/[<>]/g, ''); }
+function showToast(message) {
+  const toast = $('#toast');
+  toast.textContent = message;
+  toast.classList.add('show');
+  window.setTimeout(() => toast.classList.remove('show'), 2200);
+}
+
+function renderTasks() {
+  const list = $('#taskList');
+  const filtered = state.tasks.filter(task => activeFilter === 'all' || (activeFilter === 'done' ? task.done : !task.done));
+  list.innerHTML = filtered.map((task, index) => `
+    <label class="task ${task.done ? 'done' : ''}">
+      <input type="checkbox" data-task-index="${state.tasks.indexOf(task)}" ${task.done ? 'checked' : ''}>
+      <div><strong>${clean(task.title)}</strong><small>${clean(task.meta || 'وظیفه جدید')}</small></div>
+      <time>${task.time || '--:--'}</time>
+    </label>`).join('');
+  $('#taskCount').textContent = state.tasks.filter(task => !task.done).length;
+  const done = state.tasks.filter(task => task.done).length;
+  $('#completionRate').innerHTML = `${Math.round((done / Math.max(state.tasks.length, 1)) * 100)} <em>درصد</em>`;
+}
+function renderGoals() {
+  $('#goalList').innerHTML = state.goals.map((goal, index) => `
+    <div class="goal"><div class="goal-title"><span>${clean(goal.title)}</span><b>${goal.value}%</b></div>
+    <div class="goal-progress"><i style="width:${goal.value}%;background:${goal.color === 'orange' ? 'var(--orange)' : 'var(--purple)'}"></i></div>
+    <div class="goal-meta"><span>${100 - goal.value}% تا تکمیل باقی مانده</span><button data-goal-index="${index}">+ پیشرفت</button></div></div>`).join('');
+}
+function openModal(type) {
+  modalType = type;
+  $('#modalTitle').textContent = type === 'task' ? 'وظیفه جدید' : type === 'goal' ? 'هدف جدید' : 'یادداشت جدید';
+  $('#modalTitleInput').value = '';
+  $('#modalDescriptionInput').value = '';
+  $('#modal').classList.add('open');
+  $('#modal').setAttribute('aria-hidden', 'false');
+  $('#modalTitleInput').focus();
+}
+function closeModal() { $('#modal').classList.remove('open'); $('#modal').setAttribute('aria-hidden', 'true'); modalType = null; }
+function submitModal() {
+  const title = clean($('#modalTitleInput').value);
+  const description = clean($('#modalDescriptionInput').value);
+  if (!title) return showToast('لطفاً عنوان را وارد کن');
+  if (modalType === 'task') state.tasks.push({ title, meta: description || 'وظیفه جدید', time: '--:--', done: false });
+  if (modalType === 'goal') state.goals.push({ title, value: 0, color: state.goals.length % 2 ? 'orange' : 'purple' });
+  if (modalType === 'note') state.note = `${state.note ? `${state.note}\n` : ''}${title}`;
+  saveState(); renderTasks(); renderGoals(); $('#notesInput').value = state.note; closeModal(); showToast('با موفقیت ذخیره شد ✓');
+}
+function updateTimer() {
+  const minutes = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
+  const seconds = String(timerSeconds % 60).padStart(2, '0');
+  $('#timerDisplay').textContent = `${minutes}:${seconds}`;
+  $('#timerProgress').style.width = `${((25 * 60 - timerSeconds) / (25 * 60)) * 100}%`;
+}
+function toggleTimer() {
+  timerRunning = !timerRunning;
+  $('#timerButton').textContent = timerRunning ? 'توقف جلسه' : 'ادامه جلسه';
+  if (timerRunning) timerInterval = window.setInterval(() => { timerSeconds -= 1; updateTimer(); if (timerSeconds <= 0) { resetTimer(); showToast('جلسه تمرکز تمام شد؛ استراحت کن!'); } }, 1000);
+  else window.clearInterval(timerInterval);
+}
+function resetTimer() { window.clearInterval(timerInterval); timerRunning = false; timerSeconds = 25 * 60; $('#timerButton').textContent = 'شروع جلسه'; updateTimer(); }
+function exportData() { const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'rava-backup.json'; link.click(); URL.revokeObjectURL(link.href); showToast('نسخه پشتیبان آماده شد ✓'); }
+function applyTheme() { document.body.classList.toggle('dark', state.theme === 'dark'); $('#themeToggle').textContent = state.theme === 'dark' ? '☀' : '☾'; }
+function handleAction(action) { if (action === 'task') openModal('task'); if (action === 'goal') openModal('goal'); if (action === 'focus') { document.querySelector('#focus').scrollIntoView({ behavior: 'smooth' }); if (!timerRunning) toggleTimer(); } if (action === 'export') exportData(); if (action === 'search') { const query = window.prompt('چه چیزی را جستجو می‌کنی؟'); if (query) showToast(`جستجو برای «${clean(query)}» آماده است`); } if (action === 'close') closeModal(); if (action === 'submit') submitModal(); }
+
+function bindEvents() {
+  document.addEventListener('click', event => { const action = event.target.closest('[data-action]')?.dataset.action; if (action) handleAction(action); });
+  $('#taskList').addEventListener('change', event => { const index = event.target.dataset.taskIndex; if (index === undefined) return; state.tasks[index].done = event.target.checked; saveState(); renderTasks(); showToast(event.target.checked ? 'وظیفه تکمیل شد — عالی پیش رفتی!' : 'وظیفه به برنامه برگشت'); });
+  $$('.tabs button').forEach(button => button.addEventListener('click', () => { $$('.tabs button').forEach(item => item.classList.remove('active')); button.classList.add('active'); activeFilter = button.dataset.filter; renderTasks(); }));
+  $('#goalList').addEventListener('click', event => { const button = event.target.closest('[data-goal-index]'); if (!button) return; const goal = state.goals[Number(button.dataset.goalIndex)]; goal.value = Math.min(100, goal.value + 5); saveState(); renderGoals(); showToast('پیشرفت هدف ثبت شد ✦'); });
+  $('#themeToggle').addEventListener('click', () => { state.theme = state.theme === 'dark' ? 'light' : 'dark'; saveState(); applyTheme(); });
+  $('#timerButton').addEventListener('click', toggleTimer); $('#timerReset').addEventListener('click', resetTimer);
+  $('#notesInput').addEventListener('input', event => { state.note = event.target.value; saveState(); });
+  $('#notesInput').addEventListener('keydown', event => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') showToast('یادداشت ذخیره شد ✓'); });
+  $('#modal').addEventListener('click', event => { if (event.target.id === 'modal') closeModal(); });
+  document.addEventListener('keydown', event => { if (event.key === 'Escape') closeModal(); if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); openModal('task'); } });
+}
+
+function init() { applyTheme(); renderTasks(); renderGoals(); $('#notesInput').value = state.note || ''; updateTimer(); bindEvents(); }
+init();
